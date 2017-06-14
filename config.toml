@@ -1,0 +1,15 @@
+[ovh]
+endpoint = "soyoustart-eu"
+appkey = "..."
+appsecret = "..."
+consumerkey = "..."
+
+[packet.net]
+type = 1
+location = ''
+
+[generic]
+ bootstrapipxe = 'https://bootstrap.gig.tech/ipxe/master/'
+ zerotierapi = ''
+ zerotiernetworkid = ''
+ 

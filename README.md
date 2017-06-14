@@ -1,6 +1,6 @@
 # builder bootstrap
 
-## requirements 
+## requirements
 
 - python 3.x
 - pip3
@@ -10,6 +10,7 @@
 ```
 pip3 install https://github.com/Jumpscale/builder_bootstrap
 curl ... > ~/builder_bootstrap.py
+curl ... > ~/config.toml
 
 ```
 
