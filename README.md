@@ -2,17 +2,11 @@
 
 ## requirements
 
-- python 3.x
-- pip3
+- jumpscale9 docker environment see: https://github.com/Jumpscale/developer
 
-## to install
+## start/login into your docker
 
+```bash
+js9_start
+ssh root@localhost -p 2222
 ```
-pip3 install https://github.com/Jumpscale/builder_bootstrap
-curl ... > ~/builder_bootstrap.py
-
-```
-
-## to use
-
-- edit  ~/builder_bootstrap.py
