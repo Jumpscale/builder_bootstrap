@@ -10,7 +10,6 @@
 ```
 pip3 install https://github.com/Jumpscale/builder_bootstrap
 curl ... > ~/builder_bootstrap.py
-curl ... > ~/config.toml
 
 ```
 
