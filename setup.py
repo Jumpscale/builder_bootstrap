@@ -36,6 +36,7 @@ setup(
     license='Apache',
     packages=['JumpScale9Builder'],
     install_requires=[
+        'JumpScale9>=9.0.0',
         'g8core>=1.0.0',
         'pytoml>=0.1.12',
         'redis>=2.10.5',
