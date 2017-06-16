@@ -1,142 +1,67 @@
-import requests
-import ovh
-import pytoml
+
+try:
+    import ovh
+except:
+    j.do.execute("pip3 install ovh")
+
+from js9 import j
 
 
-class ZeroOS_Ovh():
-    def __init__(self, appkey, appsecret, consumerkey):
-        self.client = ovh.Client(
-            endpoint='soyoustart-eu',
-            application_key=appkey,
-            application_secret=appsecret,
-            consumer_key=consumerkey,
-        )
+c = j.core.state.config
 
-        self.scriptId = -1
+if "ovh" not in c:
+    c["ovh"] = {}
+    c["ovh"]["appkey"] = ""
+    c["ovh"]["appsecret"] = ""
+    c["ovh"]["consumerkey"] = ""
+    c["ovh"]["enable"] = False
 
-    def clientStatus(self):
-        print(self.client.get("/auth/currentCredential"))
-        print(self.client.get("/me/api/application"))
-        print(self.client.get("/me/api/credential"))
+if "zerotier" not in c:
+    c["zerotier"] = {}
+    c["zerotier"]["networkid"] = ""
+    c["zerotier"]["apitoken"] = ""
+    c["zerotier"]["enable"] = False
 
-        """
-        rulz = [
-            {'method': 'GET', 'path': '/*'},
-            {'method': 'PUT', 'path': '/*'},
-            {'method': 'POST', 'path': '/*'},
-            {'method': "DEL", 'path': '/*'},
-        ]
+if "packetnet" not in c:
+    c["packetnet"] = {}
+    c["packetnet"]["apitoken"] = ""
+    c["packetnet"]["sshkey"] = ""
+    c["packetnet"]["enable"] = False
 
-        print(self.client.post('/auth/credential', accessRules=rulz))
-        """
+if "zerohub" not in c:
+    c["zerohub"] = {}
 
-        return True
+keys = ["ovh", "zerotier", "packetnet", "zerohub"]
+for key0 in keys:
+    for key, val in c[key0].items():
+        if key == "enable":
+            continue
+        if val == None or val.strip() is "":
+            c[key0][key] = j.tools.console.askString("Please specify %s:%s" % (key0, key))
 
-    def listNetworkBootloader(self):
-        return self.client.get("/me/ipxeScript")
+c["ovh"]["endpoint"] = "soyoustart-eu"
+c["ovh"]["enable"] = True
+c["zerohub"]["bootstrapipxe"] = 'https://bootstrap.gig.tech/ipxe/master/'
+c["zerotier"]["enable"] = True
+c["redis"]["unixsocket"] = "/tmp/redis.sock"
+# c["packetnet"]["enable"] = True
 
-    def inspectNetworkBootloader(self, name):
-        return self.client.delete("/me/ipxeScript/%s" % name)
-
-    def deleteNetworkBootloader(self, name):
-        return self.client.delete("/me/ipxeScript/%s" % name)
-
-    def installNetworkBootloader(self, ipxe):
-        return self.client.post("/me/ipxeScript", **ipxe)
-
-    def isAvailable(self, name):
-        existing = self.listNetworkBootloader()
-
-        for item in existing:
-            if item == name:
-                return True
-
-        return None
-
-    def _setBootloader(self, target, bootid):
-        print("[+] bootloader selected: %s" % bootid)
-
-        payload = {"bootId": int(bootid)}
-        self.client.put("/dedicated/server/%s" % target, **payload)
-
-        return True
-
-    def setBootloader(self, target, name):
-        bootlist = self.client.get("/dedicated/server/%s/boot?bootType=ipxeCustomerScript" % target)
-        checked = None
-
-        for bootid in bootlist:
-            data = self.client.get("/dedicated/server/%s/boot/%s" % (target, bootid))
-            if data['kernel'] == name:
-                return self._setBootloader(target, bootid)
-
-        return False
-
-    def reboot(self, target):
-        return self.client.post("/dedicated/server/%s/reboot" % target)
-
-    #
-    # custom builder
-    #
-    def build(self, url):
-        # strip trailing flash
-        url = url.rstrip('/')
-
-        # downloading original ipxe script
-        script = requests.get(url)
-        if script.status_code != 200:
-            raise RuntimeError("Invalid script URL")
-
-        # going unsecure, because ovh
-        fixed = script.text.replace('https://bootstrap.', 'http://unsecure.bootstrap.')
-
-        # setting name and description according to the url
-        fields = url.split('/')
-
-        if len(fields) == 7:
-            # branch name, zerotier network, arguments
-            description = "Zero-OS: %s (%s, %s)" % (fields[4], fields[5], fields[6])
-            name = "zero-os-%s-%s,%s" % (fields[4], fields[5], fields[6])
-
-        elif len(fields) == 6:
-            # branch name, zerotier network, no arguments
-            description = "Zero-OS: %s (%s, no arguments)" % (fields[4], fields[5])
-            name = "zero-os-%s-%s" % (fields[4], fields[5])
-
-        else:
-            # branch name, no zerotier, no arguments
-            description = "Zero-OS: %s (no zerotier, no arguments)" % fields[4]
-            name = "zero-os-%s" % fields[4]
-
-        return {'description': description, 'name': name, 'script': fixed}
-
-    def configure(self, target, url):
-        ipxe = self.build(url)
-
-        print("[+] description: %s" % ipxe['description'])
-        print("[+] boot loader: %s" % ipxe['name'])
-
-        if not self.isAvailable(ipxe['name']):
-            print("[+] installing the bootloader")
-            self.installNetworkBootloader(ipxe)
-
-        zos.setBootloader(target, ipxe['name'])
+j.core.state.configSave()
 
 
-if __name__ == '__main__':
+def ovh():
+    cl = j.clients.ovh.get(c["ovh"]["appkey"], c["ovh"]["appsecret"], c["ovh"]["consumerkey"])
+
+    serverid = j.tools.console.askChoice(cl.serversGetList(), "select server to boot g8os, be careful !")
+
+    cl.zeroOSBoot(serverid, "https://bootstrap.gig.tech/ipxe/master/%s" % c["zerotier"]["networkid"])
 
     from IPython import embed
-    print("DEBUG NOW lll")
+    print("DEBUG NOW 87")
     embed()
     raise RuntimeError("stop debug here")
 
-    target = "{target}"
+    # cl.reboot(serverid)
 
-    print("[+] initializing client")
-    zos = ZeroOS_Ovh('{Application Key}', '{Application Key}', '{Consumer Key}')
 
-    print("[+] setting up machine: %s" % target)
-    zos.configure(target, "https://bootstrap.gig.tech/ipxe/master/17d709436c7366d8/debug")
-
-    print("[+] rebooting the server")
-    zos.reboot(target)
+ovh()
