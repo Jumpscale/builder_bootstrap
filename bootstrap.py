@@ -1,7 +1,8 @@
 from js9 import j
+from zeroos.orchestrator.sal.Node import Node
 import subprocess
 import time
-import json
+
 
 def ovh(config):
     appkey = config["ovh"]["appkey"]
@@ -26,7 +27,7 @@ def ovh(config):
 
 def containerZt(cn):
     while True:
-        ztinfo = cn.zerotier.list()
+        ztinfo = cn.client.zerotier.list()
         ztdata = ztinfo[0]
 
         if len(ztdata['assignedAddresses']) == 0:
@@ -58,13 +59,22 @@ if __name__ == '__main__':
     print("[+] contacting zero-os server: %s" % ipaddr_priv)
     while True:
         try:
-            cl = j.clients.g8core.get(ipaddr_priv)
-            cl.timeout = 180
+            node = Node(ipaddr_priv)
+            node.client.timeout = 180
             break
 
         except RuntimeError as e:
             time.sleep(1)
             pass
+
+    print("[+] prepare disks")
+    try:
+        node.ensure_persistance()
+    except RuntimeError:
+        do = j.tools.console.askYesNo("No available disks for 0-fs cache available, wipe disks ?")
+        if do:
+            node.wipedisks()
+            node.ensure_persistance()
 
     print("[+] configuring ubuntu container")
     ubuntu = "https://hub.gig.tech/maxux/ubuntu1604.flist"
@@ -75,20 +85,19 @@ if __name__ == '__main__':
         {'type': 'default'},
         {'type': 'zerotier', 'id': ztnetwork}
     ]
-    containerid = cl.container.create(ubuntu, nics=network).get()
-    cn = cl.container.client(json.loads(containerid.data))
+    cn = node.containers.create(name='bootstrap', flist=ubuntu, hostname='bootstrap', nics=network)
 
     print("[+] setting up and starting ssh server")
-    cn.bash('dpkg-reconfigure openssh-server').get()
-    cn.bash('/etc/init.d/ssh start').get()
+    cn.client.bash('dpkg-reconfigure openssh-server')
+    cn.client.bash('/etc/init.d/ssh start')
 
     print("[+] allowing local ssh key")
     keys = subprocess.run(["ssh-add", "-L"], stdout=subprocess.PIPE)
     strkeys = keys.stdout.decode('utf-8')
 
-    fd = cn.filesystem.open("/root/.ssh/authorized_keys", "w")
-    cn.filesystem.write(fd, strkeys.encode('utf-8'))
-    cn.filesystem.close(fd)
+    fd = cn.client.filesystem.open("/root/.ssh/authorized_keys", "w")
+    cn.client.filesystem.write(fd, strkeys.encode('utf-8'))
+    cn.client.filesystem.close(fd)
 
     print("[+] waiting for zerotier")
     containeraddr = containerZt(cn)
